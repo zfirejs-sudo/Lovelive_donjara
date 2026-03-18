@@ -2,6 +2,10 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 body {
@@ -290,6 +294,8 @@ button {
     font-size: 16px;
     cursor: pointer;
     transition: background-color 0.3s;
+    touch-action: manipulation;
+    min-height: 44px;
 }
 
 button:hover {
@@ -431,4 +437,126 @@ button:disabled {
 
 .close-settlement-btn:hover {
     background-color: #E64A19;
+}
+
+/* 响应式设计 - 手机端 */
+@media (max-width: 768px) {
+    body {
+        min-height: 100vh;
+        padding: 10px;
+    }
+    
+    #game-container {
+        width: 100%;
+        padding: 10px;
+        max-width: none;
+    }
+    
+    #game-board {
+        grid-template-areas:
+            "north"
+            "center"
+            "west"
+            "east"
+            "south";
+        grid-template-rows: 100px 250px 100px 100px minmax(200px, auto);
+        grid-template-columns: 1fr;
+        gap: 8px;
+        min-height: auto;
+    }
+    
+    .tile {
+        width: 60px;
+        height: 82px;
+    }
+    
+    .tile-small {
+        width: 35px;
+        height: 48px;
+    }
+    
+    .hand {
+        gap: 5px;
+    }
+    
+    .player-controls button {
+        padding: 10px 16px;
+        font-size: 14px;
+        min-height: 48px;
+    }
+    
+    button {
+        padding: 12px 20px;
+        font-size: 16px;
+        margin: 5px;
+        min-height: 48px;
+    }
+    
+    #game-info {
+        font-size: 12px;
+    }
+    
+    .modal-content {
+        padding: 20px;
+    }
+    
+    .modal-content h2 {
+        font-size: 24px;
+    }
+    
+    .winner-name {
+        font-size: 20px;
+    }
+    
+    .win-type-score {
+        font-size: 18px;
+    }
+    
+    .bonus-scores {
+        font-size: 16px;
+    }
+    
+    .winning-tiles .tile {
+        width: 55px;
+        height: 75px;
+    }
+    
+    .character-info {
+        font-size: 11px;
+        width: 60px;
+        padding: 5px;
+    }
+    
+    .chi-notification {
+        font-size: 16px;
+        padding: 15px 25px;
+    }
+}
+
+@media (max-width: 480px) {
+    #game-board {
+        grid-template-rows: 80px 200px 80px 80px minmax(180px, auto);
+    }
+    
+    .tile {
+        width: 50px;
+        height: 70px;
+    }
+    
+    .tile-small {
+        width: 30px;
+        height: 40px;
+    }
+    
+    .player-controls button {
+        padding: 8px 12px;
+        font-size: 12px;
+        min-height: 44px;
+    }
+    
+    button {
+        padding: 10px 16px;
+        font-size: 14px;
+        min-height: 44px;
+    }
 }
