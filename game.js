@@ -780,7 +780,8 @@ function renderGame() {
                 }
                 
                 // 显示吃牌区（所有玩家都显示）- 在最左侧
-                if (game.playerChiTiles[player.id].length > 0) {
+                // 手机模式下不显示这个绝对定位的吃牌区，而是在手牌下方显示
+                if (!game.isMobile && game.playerChiTiles[player.id].length > 0) {
                     const chiArea = document.createElement('div');
                     chiArea.className = 'chi-area';
                     chiArea.style.position = 'absolute';
