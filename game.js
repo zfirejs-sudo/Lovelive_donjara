@@ -42,6 +42,7 @@ const game = {
     pendingRonTile: null, // 待胡的荣和牌
     pendingRonPlayerIndex: -1, // 待胡的玩家索引
     timers: [], // 存储所有定时器ID，用于重新开始时清除
+    isMobile: false, // 是否是移动设备
     // 每个小组的全部成员名单
     groupMembers: {
         "Printemps": ["高坂穗乃果", "南小鸟", "小泉花阳"],
@@ -213,6 +214,7 @@ const game = {
 function initGame() {
     clearAllTimers();
     game.state = GameState.IDLE;
+    game.isMobile = window.innerWidth <= 768; // 检测是否是移动设备
     game.players = [
         { id: 0, name: '玩家', type: PlayerType.HUMAN, hand: [], score: 0 },
         { id: 1, name: '电玩女王叶月恋', type: PlayerType.AI, hand: [], score: 0 },
@@ -375,8 +377,10 @@ function createDiscardedTilesElement(playerIndex) {
     return discardedTiles;
 }
 
+// 渲染游戏界面
 function renderGame() {
     const gameBoard = document.getElementById('game-board');
+    game.isMobile = window.innerWidth <= 768; // 每次渲染时重新检测
     gameBoard.innerHTML = '';
     
     // 添加游戏信息到页面最上方
@@ -391,14 +395,25 @@ function renderGame() {
     gameInfo.style.borderBottom = '2px solid #ddd';
     gameBoard.appendChild(gameInfo);
     
-    // 创建玩家区域 - 顺时针顺序：玩家(南) → 机器人1(东) → 机器人2(北) → 机器人3(西)
-    const playerAreas = [
-        { id: 'player-north', player: game.players[2] }, // 机器人2在北边（顶部）
-        { id: 'player-west', player: game.players[3] },  // 机器人3在西边（左边，玩家的上家）
-        { id: 'player-center', player: null },
-        { id: 'player-east', player: game.players[1] },  // 机器人1在东边（右边）
-        { id: 'player-south', player: game.players[0] }  // 玩家在南边（底部）
-    ];
+    // 创建玩家区域 - 移动端和桌面端不同布局
+    let playerAreas;
+    
+    if (game.isMobile) {
+        // 移动端：弃牌堆在中间，玩家在底部
+        playerAreas = [
+            { id: 'player-center', player: null },
+            { id: 'player-south', player: game.players[0] }  // 玩家在底部
+        ];
+    } else {
+        // 桌面端：顺时针顺序：玩家(南) → 机器人1(东) → 机器人2(北) → 机器人3(西)
+        playerAreas = [
+            { id: 'player-north', player: game.players[2] }, // 机器人2在北边（顶部）
+            { id: 'player-west', player: game.players[3] },  // 机器人3在西边（左边，玩家的上家）
+            { id: 'player-center', player: null },
+            { id: 'player-east', player: game.players[1] },  // 机器人1在东边（右边）
+            { id: 'player-south', player: game.players[0] }  // 玩家在南边（底部）
+        ];
+    }
     
     playerAreas.forEach(({ id, player }) => {
         const area = document.createElement('div');
@@ -406,13 +421,13 @@ function renderGame() {
         area.className = 'player-area';
         area.style.position = 'relative';
         
-        // 如果是当前玩家，添加金色边框
-        if (player && player.id === game.currentPlayerIndex && player.type === PlayerType.AI) {
-            area.style.border = '3px solid #FFD700';
-            area.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.5)';
-        }
-        
         if (player) {
+            // 如果是当前玩家，添加金色边框
+            if (player && player.id === game.currentPlayerIndex && player.type === PlayerType.AI) {
+                area.style.border = '3px solid #FFD700';
+                area.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.5)';
+            }
+            
             // 如果是机器人，显示头像
             if (player.type === PlayerType.AI) {
                 const avatarImg = document.createElement('img');
@@ -558,51 +573,55 @@ function renderGame() {
                 area.appendChild(hand);
             } else {
                 // 添加控制按钮区域
-                const controlsDiv = document.createElement('div');
-                controlsDiv.className = 'player-controls';
-                controlsDiv.style.marginBottom = '10px';
-                controlsDiv.style.display = 'flex';
-                controlsDiv.style.gap = '10px';
-                controlsDiv.style.justifyContent = 'center';
-                controlsDiv.style.flexWrap = 'wrap';
-                
-                // 开始游戏按钮
-                const startButton = document.createElement('button');
-                startButton.id = 'start-game';
-                startButton.textContent = '开始游戏';
-                startButton.style.fontSize = '16px';
-                startButton.style.padding = '8px 20px';
-                startButton.disabled = game.state !== GameState.IDLE;
-                startButton.addEventListener('click', startGame);
-                controlsDiv.appendChild(startButton);
-                
-                // 重新开始按钮
-                const restartButton = document.createElement('button');
-                restartButton.id = 'restart-game';
-                restartButton.textContent = '重新开始';
-                restartButton.style.fontSize = '16px';
-                restartButton.style.padding = '8px 20px';
-                restartButton.addEventListener('click', startGame);
-                controlsDiv.appendChild(restartButton);
-                
-                // 显示/隐藏角色信息按钮
-                const toggleInfoButton = document.createElement('button');
-                toggleInfoButton.id = 'toggle-info-btn';
-                toggleInfoButton.textContent = game.showCharacterInfo ? '隐藏角色信息' : '显示角色信息';
-                toggleInfoButton.style.fontSize = '16px';
-                toggleInfoButton.style.padding = '8px 20px';
-                toggleInfoButton.addEventListener('click', () => {
-                    game.showCharacterInfo = !game.showCharacterInfo;
-                    renderGame();
-                });
-                controlsDiv.appendChild(toggleInfoButton);
-                
-                // 排序按钮
-                const sortButton = document.createElement('button');
-                sortButton.id = 'sort-tiles-btn';
-                sortButton.textContent = '排序';
-                sortButton.style.fontSize = '16px';
-                sortButton.style.padding = '8px 20px';
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'player-controls';
+            controlsDiv.style.marginBottom = '10px';
+            controlsDiv.style.display = 'flex';
+            controlsDiv.style.gap = game.isMobile ? '4px' : '10px';
+            controlsDiv.style.justifyContent = 'center';
+            controlsDiv.style.flexWrap = 'wrap';
+            
+            // 开始游戏按钮
+            const startButton = document.createElement('button');
+            startButton.id = 'start-game';
+            startButton.textContent = game.isMobile ? '开始' : '开始游戏';
+            startButton.style.fontSize = game.isMobile ? '10px' : '16px';
+            startButton.style.padding = game.isMobile ? '4px 6px' : '8px 20px';
+            startButton.style.minWidth = game.isMobile ? '50px' : 'auto';
+            startButton.disabled = game.state !== GameState.IDLE;
+            startButton.addEventListener('click', startGame);
+            controlsDiv.appendChild(startButton);
+            
+            // 重新开始按钮
+            const restartButton = document.createElement('button');
+            restartButton.id = 'restart-game';
+            restartButton.textContent = game.isMobile ? '重开' : '重新开始';
+            restartButton.style.fontSize = game.isMobile ? '10px' : '16px';
+            restartButton.style.padding = game.isMobile ? '4px 6px' : '8px 20px';
+            restartButton.style.minWidth = game.isMobile ? '50px' : 'auto';
+            restartButton.addEventListener('click', startGame);
+            controlsDiv.appendChild(restartButton);
+            
+            // 显示/隐藏角色信息按钮
+            const toggleInfoButton = document.createElement('button');
+            toggleInfoButton.id = 'toggle-info-btn';
+            toggleInfoButton.textContent = game.showCharacterInfo ? (game.isMobile ? '隐信息' : '隐藏信息') : (game.isMobile ? '显信息' : '显示信息');
+            toggleInfoButton.style.fontSize = game.isMobile ? '10px' : '16px';
+            toggleInfoButton.style.padding = game.isMobile ? '4px 6px' : '8px 20px';
+            toggleInfoButton.style.minWidth = game.isMobile ? '50px' : 'auto';
+            toggleInfoButton.addEventListener('click', () => {
+                game.showCharacterInfo = !game.showCharacterInfo;
+                renderGame();
+            });
+            controlsDiv.appendChild(toggleInfoButton);
+            
+            // 排序按钮
+            const sortButton = document.createElement('button');
+            sortButton.id = 'sort-tiles-btn';
+            sortButton.textContent = '排序';
+            sortButton.style.fontSize = game.isMobile ? '10px' : '16px';
+            sortButton.style.padding = game.isMobile ? '4px 6px' : '8px 20px';
+            sortButton.style.minWidth = game.isMobile ? '40px' : 'auto';
                 sortButton.addEventListener('click', () => {
                     const lastDrawn = game.lastDrawnTile[0];
                     let lastDrawnTile = null;
@@ -1035,15 +1054,182 @@ function renderGame() {
                 });
             }
         } else {
-            // 中心区域显示3个机器人的弃牌堆
-            // 布局：左1/4 - 机器人3，中间1/2 - 机器人2，右1/4 - 机器人1
-            const discardLayout = document.createElement('div');
-            discardLayout.style.display = 'flex';
-            discardLayout.style.width = '100%';
-            discardLayout.style.height = '100%';
-            discardLayout.style.gap = '10px';
-            discardLayout.style.minHeight = '0';
-            discardLayout.style.overflow = 'hidden';
+            // 中心区域显示弃牌堆 - 移动端和桌面端不同布局
+            if (game.isMobile) {
+                // 移动端：上方3/4显示3个机器人弃牌区（水平排列），下方1/4显示玩家弃牌
+                const discardLayout = document.createElement('div');
+                discardLayout.style.display = 'flex';
+                discardLayout.style.flexDirection = 'column';
+                discardLayout.style.width = '100%';
+                discardLayout.style.height = '100%';
+                discardLayout.style.gap = '5px';
+                discardLayout.style.minHeight = '0';
+                discardLayout.style.overflow = 'hidden';
+                
+                // 上方3/4：3个机器人弃牌区水平排列
+                const aiDiscardArea = document.createElement('div');
+                aiDiscardArea.style.flex = '3';
+                aiDiscardArea.style.display = 'flex';
+                aiDiscardArea.style.gap = '5px';
+                aiDiscardArea.style.minHeight = '0';
+                aiDiscardArea.style.overflow = 'hidden';
+                
+                // 机器人3、机器人2、机器人1，从左到右
+                const aiPlayers = [game.players[3], game.players[2], game.players[1]];
+                
+                aiPlayers.forEach(aiPlayer => {
+                    const aiArea = document.createElement('div');
+                    aiArea.style.flex = '1';
+                    aiArea.style.display = 'flex';
+                    aiArea.style.flexDirection = 'column';
+                    aiArea.style.border = '1px solid #cccccc';
+                    aiArea.style.borderRadius = '8px';
+                    aiArea.style.padding = '4px';
+                    aiArea.style.backgroundColor = '#f9f9f9';
+                    aiArea.style.overflow = 'hidden';
+                    aiArea.style.minHeight = '0';
+                    
+                    // 如果是当前玩家，添加金色边框
+                    if (aiPlayer.id === game.currentPlayerIndex) {
+                        aiArea.style.border = '2px solid #FFD700';
+                        aiArea.style.boxShadow = '0 0 8px rgba(255, 215, 0, 0.5)';
+                    }
+                    
+                    // 显示机器人信息区域
+                    const infoArea = document.createElement('div');
+                    infoArea.style.display = 'flex';
+                    infoArea.style.alignItems = 'center';
+                    infoArea.style.gap = '4px';
+                    infoArea.style.marginBottom = '4px';
+                    
+                    // 头像
+                    const avatarImg = document.createElement('img');
+                    avatarImg.src = `imgs/机器人${aiPlayer.id}.jpg`;
+                    avatarImg.alt = aiPlayer.name;
+                    avatarImg.style.width = '24px';
+                    avatarImg.style.height = '24px';
+                    avatarImg.style.borderRadius = '50%';
+                    avatarImg.style.objectFit = 'cover';
+                    infoArea.appendChild(avatarImg);
+                    
+                    // 名字和信息
+                    const nameInfoArea = document.createElement('div');
+                    nameInfoArea.style.display = 'flex';
+                    nameInfoArea.style.flexDirection = 'column';
+                    
+                    const nameDiv = document.createElement('div');
+                    nameDiv.style.fontSize = '9px';
+                    nameDiv.style.fontWeight = 'bold';
+                    nameDiv.style.wordBreak = 'break-all';
+                    nameDiv.textContent = aiPlayer.name;
+                    nameInfoArea.appendChild(nameDiv);
+                    
+                    const countDiv = document.createElement('div');
+                    countDiv.style.fontSize = '8px';
+                    countDiv.style.color = '#666';
+                    let infoText = `${aiPlayer.hand.length}张`;
+                    if (game.isRiichi[aiPlayer.id]) {
+                        infoText += ' 立直';
+                    }
+                    if (game.playerChiTiles[aiPlayer.id].length > 0) {
+                        infoText += ` 吃${game.playerChiTiles[aiPlayer.id].length}`;
+                    }
+                    countDiv.textContent = infoText;
+                    nameInfoArea.appendChild(countDiv);
+                    
+                    infoArea.appendChild(nameInfoArea);
+                    aiArea.appendChild(infoArea);
+                    
+                    // 显示弃牌
+                    const discardContainer = document.createElement('div');
+                    discardContainer.style.flex = '1';
+                    discardContainer.style.overflow = 'hidden';
+                    discardContainer.style.display = 'flex';
+                    discardContainer.style.flexWrap = 'wrap';
+                    discardContainer.style.justifyContent = 'center';
+                    discardContainer.style.alignContent = 'flex-start';
+                    discardContainer.style.gap = '3px';
+                    
+                    const aiDiscards = game.playerDiscardedTiles[aiPlayer.id];
+                    aiDiscards.forEach((tile) => {
+                        const tileElement = document.createElement('div');
+                        tileElement.className = 'tile-small';
+                        tileElement.style.backgroundColor = getSeriesColor(tile.series);
+                        tileElement.style.width = '24px';
+                        tileElement.style.height = '32px';
+                        
+                        if (tile.type === 'wildcard') {
+                            tileElement.style.border = '2px dashed #FFD700';
+                        }
+                        
+                        if (game.globalLastDiscardingPlayerIndex === aiPlayer.id && 
+                            game.globalLastDiscardedTile && 
+                            game.globalLastDiscardedTile.uniqueId === tile.uniqueId) {
+                            tileElement.classList.add('last-discarded-tile');
+                        }
+                        
+                        const img = document.createElement('img');
+                        img.src = tile.imageUrl;
+                        img.alt = tile.name;
+                        img.style.width = '100%';
+                        img.style.height = '100%';
+                        img.style.objectFit = 'cover';
+                        
+                        img.onerror = function() {
+                            tileElement.removeChild(img);
+                            tileElement.textContent = tile.name;
+                            tileElement.style.display = 'flex';
+                            tileElement.style.justifyContent = 'center';
+                            tileElement.style.alignItems = 'center';
+                            tileElement.style.fontSize = '7px';
+                        };
+                        
+                        tileElement.appendChild(img);
+                        discardContainer.appendChild(tileElement);
+                    });
+                    
+                    aiArea.appendChild(discardContainer);
+                    aiDiscardArea.appendChild(aiArea);
+                });
+                
+                // 下方1/4：玩家弃牌
+                const playerDiscardArea = document.createElement('div');
+                playerDiscardArea.style.flex = '1';
+                playerDiscardArea.style.display = 'flex';
+                playerDiscardArea.style.flexDirection = 'column';
+                playerDiscardArea.style.border = '1px solid #cccccc';
+                playerDiscardArea.style.borderRadius = '8px';
+                playerDiscardArea.style.padding = '4px';
+                playerDiscardArea.style.overflow = 'hidden';
+                playerDiscardArea.style.minHeight = '0';
+                
+                if (game.currentPlayerIndex === 0) {
+                    playerDiscardArea.style.border = '2px solid #FFD700';
+                    playerDiscardArea.style.boxShadow = '0 0 8px rgba(255, 215, 0, 0.5)';
+                }
+                
+                const playerDiscardLabel = document.createElement('div');
+                playerDiscardLabel.style.fontSize = '10px';
+                playerDiscardLabel.style.fontWeight = 'bold';
+                playerDiscardLabel.style.marginBottom = '4px';
+                playerDiscardLabel.textContent = '玩家弃牌';
+                playerDiscardArea.appendChild(playerDiscardLabel);
+                
+                const playerDiscardedTiles = createDiscardedTilesElement(0);
+                playerDiscardArea.appendChild(playerDiscardedTiles);
+                
+                discardLayout.appendChild(aiDiscardArea);
+                discardLayout.appendChild(playerDiscardArea);
+                area.appendChild(discardLayout);
+            } else {
+                // 桌面端：左1/4 - 机器人3，中间1/2 - 机器人2，右1/4 - 机器人1
+                const discardLayout = document.createElement('div');
+                discardLayout.style.display = 'flex';
+                discardLayout.style.width = '100%';
+                discardLayout.style.height = '100%';
+                discardLayout.style.gap = '10px';
+                discardLayout.style.minHeight = '0';
+                discardLayout.style.overflow = 'hidden';
             
             // 左1/4 - 机器人3弃牌
             const leftDiscardArea = document.createElement('div');
@@ -1143,6 +1329,7 @@ function renderGame() {
             discardLayout.appendChild(rightDiscardArea);
             
             area.appendChild(discardLayout);
+            }
         }
         
         gameBoard.appendChild(area);
